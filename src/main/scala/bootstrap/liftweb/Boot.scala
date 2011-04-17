@@ -1,6 +1,7 @@
 package bootstrap.liftweb
 
 import net.liftweb._
+import org.acidbits.rest._
 import util._
 import Helpers._
 
@@ -10,7 +11,9 @@ import sitemap._
 import Loc._
 import mapper._
 
-import pl.itigo.model._
+import org.acidbits.model._
+import org.acidbits.rest._
+
 import net.liftweb.widgets.tablesorter.TableSorter
 
 /**
@@ -31,26 +34,28 @@ class Boot {
       DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
     }
 
-    TableSorter.init
-    
     // Use Lift's Mapper ORM to populate the database
     // you don't need to use Mapper to use Lift... use
     // any ORM you want
     Schemifier.schemify(true, Schemifier.infoF _, User)
 
     // where to search snippet
-    LiftRules.addToPackages("pl.itigo")
+    LiftRules.addToPackages("org.acidbits")
     /* for H2 console and other */
     LiftRules.passNotFoundToChain = true
     
+    val loggedIn = If(() => User.loggedIn_?, () => S.redirectTo("/404"))
+    
     val menus = List(Menu.i("Home") / "index" >> User.AddUserMenusAfter, // the simple way to declare a menu
       Menu.i("Simple Form") / "simpleform",
-      Menu.i("Ajax Form") / "ajaxform",
+      Menu.i("Ajax Form") / "ajaxform" >> loggedIn,
       Menu.i("Lazy Load") / "lazyload",
       Menu.i("Parallel Rendering") / "parallel",
+      Menu.i("Comet Chat") / "chat",
+      Menu.i("Rest") / "rest" / ** >> Hidden,
       Menu.i("404") / "404" >> Hidden, 
       // more complex because this menu allows anything in the
-      // /static path to be visible
+      // static path to be visible
       Menu(Loc("Static", Link(List("static"), true, "/static/index"), 
 	       "Static Content")))
     // Build SiteMap
@@ -64,10 +69,14 @@ class Boot {
     
     // url rewriting
     LiftRules.statefulRewrite.append {
-    	case RewriteRequest(ParsePath("project" :: proj_name :: Nil,_,_,_),_,_) => {
-    		RewriteResponse(List("projectDetails"), Map("proj_name" -> proj_name))
+    	case RewriteRequest(ParsePath("post" :: id :: Nil,_,_,_),_,_) => {
+    		RewriteResponse(List("/post/details"), Map("id" -> id))
     	}
     }
+    
+    // REST
+    LiftRules.dispatch.append(UserService)
+    
     //Show the spinny image when an Ajax call starts
     LiftRules.ajaxStart =
       Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)

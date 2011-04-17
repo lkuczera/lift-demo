@@ -19,7 +19,7 @@ object Main {
 	var lastName = ""
 	var email = ""
 	
-	def form = "name=first_name" #> text("", firstName = _) &
+	def form = "name=first_name" #> text(firstName, firstName = _) &
 		"name=last_name" #> text("", lastName = _) &
 		"name=email" #> text(""	, email = _) &
 		"type=submit" #> submit("submit", doSubmit)
